@@ -579,109 +579,129 @@ class ImagePrediction():
                 self.UnsureFolder = self.OKFolder = program.SaveNormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'Unsure' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.UnsureFolder)
 
+    def CheckBurr(self,_ImagePath):
+
+        self._ImagePath = _ImagePath
+        self._ImageName = os.path.split(self._ImagePath)[-1]
+        if 'burr' in self._ImageName:
+
+            self._BurrCheck = 'True'
+
+        else:
+
+            self._BurrCheck = 'False'
+
     def AIPrediction(self,ImagePath):
 
         self.Start_time = time.time()
         self.ImagePath = ImagePath
-        self.Img = cv2.imread(ImagePath, cv2.IMREAD_GRAYSCALE)
-        self.TestImg = cv2.resize(self.Img, (224,224))
-        self.ColorImg = cv2.cvtColor(self.TestImg, cv2.COLOR_GRAY2RGB)
-        self.TestingImage = self.ColorImg.reshape(1, 224, 224, 3)
-        self.Prediction = AI_model.predict(self.TestingImage)
-        self.PredictionScore = self.Prediction[0]
-        self.BurrScore = self.PredictionScore[1]
-        self.NGScore = self.PredictionScore[3]
-        self.OKScore = self.PredictionScore[4]
-        self.MaxPosition = np.argmax(self.Prediction)
-        self.Stop_time = time.time()
-        self.Interval = round(self.Stop_time - self.Start_time, 3)
-        self.BurrThreshold = 1.5
-        self.OKThreshold = float(program.Entry_AIThresHold.get())/ 100
-        # Append the AI_socre and AI_speed infromation
-        self.AI_Score.append(round(self.PredictionScore[self.MaxPosition] * 100, 2))
-        self.AI_Speed.append(self.Interval)
-        if program.var.get() == 1:
+        self.CheckBurr(self.ImagePath)
+        if self._BurrCheck == 'True':
 
-            if self.MaxPosition == 4:
+            self.AI_Score.append(100)
+            self.AI_Speed.append(0.01)
+            self.AIResult = 'NG'
 
-                if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+        else:
+            self.Img = cv2.imread(ImagePath, cv2.IMREAD_GRAYSCALE)
+            self.TestImg = cv2.resize(self.Img, (224,224))
+            self.ColorImg = cv2.cvtColor(self.TestImg, cv2.COLOR_GRAY2RGB)
+            self.TestingImage = self.ColorImg.reshape(1, 224, 224, 3)
+            self.Prediction = AI_model.predict(self.TestingImage)
+            self.PredictionScore = self.Prediction[0]
+            self.BurrScore = self.PredictionScore[1]
+            self.NGScore = self.PredictionScore[3]
+            self.OKScore = self.PredictionScore[4]
+            self.MaxPosition = np.argmax(self.Prediction)
+            self.Stop_time = time.time()
+            self.Interval = round(self.Stop_time - self.Start_time, 3)
+            self.BurrThreshold = 1.5
+            self.OKThreshold = float(program.Entry_AIThresHold.get())/ 100
+            # Append the AI_socre and AI_speed infromation
+            self.AI_Score.append(round(self.PredictionScore[self.MaxPosition] * 100, 2))
+            self.AI_Speed.append(self.Interval)
+            if program.var.get() == 1:
+
+                if self.MaxPosition == 4:
+
+                    if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+                            
+                        self.AIResult = 'OK'
+
+                    else:
+
+                        self.AIResult = 'Unsure'
+                    
+                else:
+
+                    self.AIResult = 'NG'
+
+            elif program.var.get() == 2:
+
+                if self.NGScore >= (len(self.PredictionScore) / 100 * 8):
+
+                    self.AIResult = 'OK'
+
+                elif self.MaxPosition == 4:
+
+                    if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+
+                        self.AIResult = 'OK'
                         
-                    self.AIResult = 'OK'
+                    else:
+
+                        self.AIResult = 'Unsure'
 
                 else:
 
-                    self.AIResult = 'Unsure'
-                
-            else:
+                    self.AIResult = 'NG' 
 
-                self.AIResult = 'NG'
+            elif program.var.get() == 3:
 
-        elif program.var.get() == 2:
+                if self.MaxPosition == 0 or self.MaxPosition == 1 or self.MaxPosition == 2:
 
-            if self.NGScore >= (len(self.PredictionScore) / 100 * 8):
+                    self.AIResult = 'NG'
 
-                self.AIResult = 'OK'
-
-            elif self.MaxPosition == 4:
-
-                if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+                elif self.MaxPosition == 3 and self.NGScore < 0.5:
 
                     self.AIResult = 'OK'
-                    
+
+                elif self.MaxPosition == 3 and self.NGScore >= 0.5:
+
+                    self.AIResult = 'NG'  
+
                 else:
 
-                    self.AIResult = 'Unsure'
+                    if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
 
-            else:
+                        self.AIResult = 'OK'
+                        
+                    else:
 
-                self.AIResult = 'NG' 
-
-        elif program.var.get() == 3:
-
-            if self.MaxPosition == 0 or self.MaxPosition == 1 or self.MaxPosition == 2:
-
-                self.AIResult = 'NG'
-
-            elif self.MaxPosition == 3 and self.NGScore < 0.5:
-
-                self.AIResult = 'OK'
-
-            elif self.MaxPosition == 3 and self.NGScore >= 0.5:
-
-                self.AIResult = 'NG'  
-
-            else:
-
-                if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
-
-                    self.AIResult = 'OK'
-                    
-                else:
-
-                    self.AIResult = 'Unsure'
-        
-        elif program.var.get() == 4:
+                        self.AIResult = 'Unsure'
             
-            if self.MaxPosition == 0 or self.MaxPosition == 1 or self.MaxPosition == 2:
+            elif program.var.get() == 4:
+                
+                if self.MaxPosition == 0 or self.MaxPosition == 1 or self.MaxPosition == 2:
 
-                self.AIResult = 'NG'
+                    self.AIResult = 'NG'
 
-            elif self.MaxPosition == 3 and self.NGScore < 0.8:
-
-                self.AIResult = 'OK'
-
-            elif self.MaxPosition == 3 and self.NGScore >= 0.8:
-
-                self.AIResult = 'NG'  
-            else:
-
-                if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+                elif self.MaxPosition == 3 and self.NGScore < 0.8:
 
                     self.AIResult = 'OK'
-                    
+
+                elif self.MaxPosition == 3 and self.NGScore >= 0.8:
+
+                    self.AIResult = 'NG'  
                 else:
 
-                    self.AIResult = 'Unsure'
+                    if (self.BurrScore < self.BurrThreshold) and (self.OKScore > self.OKThreshold):
+
+                        self.AIResult = 'OK'
+                        
+                    else:
+
+                        self.AIResult = 'Unsure'
         
         return self.AIResult
 
