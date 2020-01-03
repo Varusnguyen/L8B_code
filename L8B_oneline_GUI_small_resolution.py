@@ -15,7 +15,6 @@ import glob
 from PIL import Image, ImageTk
 from tkinter import messagebox
 
-
 class GUI():
 
     def __init__(self):
