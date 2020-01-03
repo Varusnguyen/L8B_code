@@ -18,13 +18,10 @@ from tkinter import messagebox
 
 class GUI():
 
-    
-
     def __init__(self):
 
         print('Welcome to GPM AI Software')
         
-
     def CreateGUI(self):
 
         #Definie for Class Object
