@@ -24,7 +24,6 @@ class GUI():
     def CreateGUI(self):
 
         #Definie for Class Object
-
         self.ButtonCommand = Button_Click()
         self.DisplayImageOb = DisplayImage()
 
