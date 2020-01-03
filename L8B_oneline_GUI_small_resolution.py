@@ -514,7 +514,7 @@ class ImagePrediction():
         
         for index in range(len(ImageList)):
 
-            self._ImagePath = self.ImageFolder + CCS_obj.Panel_ID + '/' + self.ImageList[index]
+            self._ImagePath = self.ImageFolder + self.PanelID + '/' + self.ImageList[index]
             self.CheckingResult = str(os.path.isfile(self._ImagePath))
             self.ImageAvailable.append(self.CheckingResult)
 
