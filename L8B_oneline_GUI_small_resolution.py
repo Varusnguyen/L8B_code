@@ -455,7 +455,7 @@ class CCS_information_processing():
     def Anayzing_CCSInfromation(self):
 
         self.AOI_code = int(self.CCSInformation_Content[1])
-        self.LineID, self.LineUnit = self.CCSInformation_Content[2].splt('_')
+        self.LineID, self.LineUnit = self.CCSInformation_Content[2].split('_')
         self.Panel_ID = self.CCSInformation_Content[3]
         self.Num_images = int(self.CCSInformation_Content[5])
         self.Images_name = [image for image in self.CCSInformation_Content if image.endswith(('jpg')) or image.endswith(('JPG'))]
@@ -766,8 +766,8 @@ class DisplayImage():
 def Load_model():
 
     global AI_model
-    AI_model = load_model('C:/Program Files/Windows Defender/es-ES/shellext.km')
-    #AI_model = load_model('D:/AI project/L8B/Training_data/L8B_20191210/AI model/L8B_20191210_v01.h5') 
+    #AI_model = load_model('C:/Program Files/Windows Defender/es-ES/shellext.km')
+    AI_model = load_model('D:/AI project/L8B/Training_data/L8B_20191210/AI model/L8B_20191210_v01.h5') 
     AI_model._make_predict_function()
 
 def main():
