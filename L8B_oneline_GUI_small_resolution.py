@@ -49,21 +49,6 @@ class GUI():
         self.var_testmode = IntVar(value=1)
         self.avariable = 1
         self.photoindex = 0
-        self.currentphoto = ""
-        self.photofactor = 0
-        self.currentphotopath = ""
-        self.currentphotoready = ""
-        self.folderpath = "C:/Users/varusnguyen/Desktop/L7B_Online_mode/Test_code_C#_images"
-        self.lastfolderpath = ""
-        self.photopath = ""
-        self.photolist = []
-        self.listspot = 0
-        self.cwd = "C:/Users"
-        self.rememberme = False
-        self.displayatx = 0
-        self.displayaty = 0
-        self.mouseup = True
-        self.currentrotation = 0
         #self.thecolor = self.colorcheck()
         self.zoomlevel = 0
         self.SaveNormalImageFolder = 'D:/AI_result/AI_normal'
