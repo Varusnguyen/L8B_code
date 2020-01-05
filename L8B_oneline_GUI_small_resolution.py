@@ -12,6 +12,7 @@ import threading
 import socket
 import csv
 import glob
+import copy
 from PIL import Image, ImageTk
 from tkinter import messagebox
 
@@ -323,16 +324,17 @@ class SocketServer():
                             self._ImageProcess.Check_image_available(CCS_obj.Panel_ID , CCS_obj.Images_name)
                             
                             if (self._ImageProcess.ImageSituation == 'False'):
-                                
-                                program.ShowInfo('Abnormal Situation')
+                                self.AI_status = 'AI_abnormal'
+                                program.ShowInfo(self.AI_status)
                                 self._ImageProcess.AbnormalSituation()
                                 _DisplayImage.AddImage(self._ImageProcess.ImageFullPath, self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
                                 _DisplayImage.ShowImage()
                                 program.ShowInfo('Abnormal Situation - Finished AI jobs')
                             
                             else:
-                                
-                                program.ShowInfo('Normal Situation')
+                                self.AI_status = 'AI_normal'
+                                program.ShowInfo(self.AI_status)
+                                self._ImageProcess.CreateOuterSavingFolder(self.AI_status)
                                 self._ImageProcess.NormalSituation()
                                 _DisplayImage.AddImage(self._ImageProcess.ImageFullPath, self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
                                 _DisplayImage.ShowImage()
@@ -506,10 +508,66 @@ class ImagePrediction():
 
             self.ImageSituation = 'True'
 
+    def CreateOuterSavingFolder(self, AIStatus):
+
+        self.AIStatus = AIStatus
+        self.OuterFolder = 'D:/' + 'Line_' + CCS_obj.LineID[1:] + '/' + 'G' + CCS_obj.LineUnit[1:] + '/' + self.AIStatus + '/' + str(datetime.date.today().month)
+
+        if os.path.exists(self.OuterFolder):
+
+            print('Outer saving image folder has been created')
+
+        else:
+
+            os.makedirs(self.OuterFolder)
+            self.ChekingAIfolder = 'D:/' + 'Line_' + CCS_obj.LineID[1:]
+            self.CheckingAIresultMonthly(self.ChekingAIfolder)
+
+    def CheckingAIresultMonthly(self, FolderPath):
+
+        self.FolderPath = FolderPath
+        self.G01_information = []
+        self.G02_information = []
+
+        try:
+            if (os.path.exists(self.FolderPath)):
+                self.PanelUnitFolders = glob.glob(self.FolderPath + '/*')
+                if len(self.PanelUnitFolders) == 0:
+                    raise error('The outer folder has no subfolder')
+                else:
+                    self.MonthCount = datetime.date.today().month
+                    for index in range(len(self.PanelUnitFolders)):                
+                        self.PanelUnit = os.path.basename(self.PanelUnitFolders[index])
+                        self.Search_folder = self.PanelUnitFolders[index] + '/' + 'AI_normal' + '/' + str(self.MonthCount - 1)
+                        self.Folder_information = []
+                        if(os.path.exists(self.Search_folder)):
+                            self.Image_Folder_List = glob.glob(self.Search_folder + '/*')
+                            if len(self.Image_Folder_List) == 0:
+                                raise error('Previous month had no data')
+                            else:
+                                for index in range(len(self.Image_Folder_List)):
+                                    self.folder_type = os.path.basename(self.Image_Folder_List[index])
+                                    self.number_images = sum([len(files) for r, d, files in os.walk(self.Image_Folder_List[index])])
+                                    self.Folder_information.append(self.folder_type)
+                                    self.Folder_information.append(self.number_images)
+                        if self.PanelUnit == 'G01':
+                            self.G01_information = copy.copy(self.Folder_information)
+                        elif self.PanelUnit == 'G02':
+                            self.G02_information = copy.copy(self.Folder_information)
+                        else:
+                            print('L8B dont need to count that Panel ')
+                        self.Folder_information.clear()
+                    print(self.G01_information)
+                    print(self.G02_information)
+            else:
+                raise Exception
+        except:
+            print('Folder is not exist')
+        
     def AbnormalSituation(self):
 
         self.ImageFullPath.clear()
-        self.SaveAbnormalImageFolder = 'D:/AI_result/AI_abnormal'
+        self.AIStatus = 'Abnormal'
         self.ImageType = '*jpg'
         self.ImageFullPath = glob.glob(self.ImageFolder + self.PanelID + '/' + self.ImageType)
 
@@ -520,20 +578,22 @@ class ImagePrediction():
 
             if (self._AIPrediction == 'NG'):
 
-                self.NGFolder = self.SaveAbnormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'NG' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.NGFolder =  self.OuterFolder + '/' + str(datetime.date.today().month) + '/' + 'NG' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.NGFolder)
 
             elif (self._AIPrediction == 'OK'):
 
-                self.OKFolder = self.SaveAbnormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'OK' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.OKFolder =  self.OuterFolder + '/' + str(datetime.date.today().month) + '/' + 'OK' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.OKFolder)
 
             else:
 
-                self.UnsureFolder = self.SaveAbnormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'Unsure' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.UnsureFolder =  self.OuterFolder + '/' + str(datetime.date.today().month) + '/' + 'Unsure' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.UnsureFolder)
 
     def NormalSituation(self):
+
+        self.AIStatus = 'Normal'
 
         for index in range(len(CCS_obj.Images_name)):
 
@@ -546,17 +606,17 @@ class ImagePrediction():
 
             if (self._AIPrediction == 'NG'):
 
-                self.NGFolder = program.SaveNormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'NG' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.NGFolder = self.OuterFolder + '/' + 'NG' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.NGFolder)
 
             elif (self._AIPrediction == 'OK'):
 
-                self.OKFolder = program.SaveNormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'OK' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.OKFolder =  self.OuterFolder + '/' + 'OK' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.OKFolder)
 
             else:
 
-                self.UnsureFolder = self.OKFolder = program.SaveNormalImageFolder + '/' + str(datetime.date.today().month) + '/' + 'Unsure' + '/' +  datetime.date.today().strftime('%Y%m%d')
+                self.UnsureFolder =  self.OuterFolder + '/' + '/' + 'Unsure' + '/' +  datetime.date.today().strftime('%Y%m%d')
                 self.SavingImage(self.Img, self.UnsureFolder)
 
     def CheckBurr(self,_ImagePath):
@@ -690,7 +750,7 @@ class ImagePrediction():
         self.SaveImageFoler = SaveImageFoler
         self.Image = Image
         self.ImageName = os.path.split(self.ImagePath)[-1]
-    
+
         if (os.path.exists(self.SaveImageFoler)):
 
             print('Save image folder has been created')
