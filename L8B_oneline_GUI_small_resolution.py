@@ -13,6 +13,7 @@ import socket
 import csv
 import glob
 import copy
+import pandas as pd
 from PIL import Image, ImageTk
 from tkinter import messagebox
 
@@ -305,7 +306,6 @@ class SocketServer():
 
                     elif CCS_obj.AOI_code == 601:
 
-                        state = 2
                         program.ShowInfo('CCS received AI result')
                         state = 0
                         self.client.close()
@@ -336,7 +336,7 @@ class SocketServer():
                                 program.ShowInfo(self.AI_status)
                                 self._ImageProcess.CreateOuterSavingFolder(self.AI_status)
                                 self._ImageProcess.NormalSituation()
-                                _DisplayImage.AddImage(self._ImageProcess.ImageFullPath, self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
+                                _DisplayImage.AddImage(self._ImageProcess.ImageFullPath_CCS, self._ImageProcess.ImageFullPath_Real,  self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
                                 _DisplayImage.ShowImage()
                                 program.ShowInfo('Normal Situation - Finished AI jobs')
 
@@ -464,18 +464,20 @@ class ImagePrediction():
 
     ImageFolder = 'D:/AI_share/CurrentCCI_DefectImages/'
 
-    def __init__(self, ImageFullPath = None, AI_Result = None, AI_Score = None, AI_Speed = None):
+    def __init__(self, ImageFullPath_CCS = None, ImageFullPath_Real = None, AI_Result = None, AI_Score = None, AI_Speed = None):
 
-        if ( ImageFullPath and AI_Result and AI_Score and AI_Speed) is None:
+        if ( ImageFullPath_CCS and ImageFullPath_Real and AI_Result and AI_Score and AI_Speed) is None:
 
-            self.ImageFullPath = []
+            self.ImageFullPath_CCS = []
+            self.ImageFullPath_Real = []
             self.AI_Result = []
             self.AI_Score = []
             self.AI_Speed = []
 
         else:
 
-            self.ImageFullPath = ImageFullPath
+            self.ImageFullPath_CCS = ImageFullPath_CCS
+            self.ImageFullPath_Real = ImageFullPath_Real
             self.AI_Score = AI_Score
             self.AI_Result = AI_Result
             self.AI_Speed = AI_Speed
@@ -496,9 +498,22 @@ class ImagePrediction():
         
         for index in range(len(ImageList)):
 
-            self._ImagePath = self.ImageFolder + self.PanelID + '/' + self.ImageList[index]
-            self.CheckingResult = str(os.path.isfile(self._ImagePath))
-            self.ImageAvailable.append(self.CheckingResult)
+            self.ImgName, self.ImgExtension = self.ImageList[index].split('.')
+            self.ImgNameAddBurr = self.ImgName + '_burr.JPG'
+            self._ImagePath_CCS = self.ImageFolder + self.PanelID + '/' + self.ImageList[index]
+            self._ImagePath_AddBurr = self.ImageFolder + self.PanelID + '/' + self.ImgNameAddBurr
+            if os.path.isfile(self._ImagePath_CCS) == True:
+                self.ImageAvailable.append('True')
+                self.ImageFullPath_CCS.append(self._ImagePath_CCS)
+                self.ImageFullPath_Real.append(self._ImagePath_CCS)
+            elif os.path.isfile(self._ImagePath_AddBurr) == True:
+                self.ImageAvailable.append('True')
+                self.ImageFullPath_CCS.append(self._ImagePath_CCS)
+                self.ImageFullPath_Real.append(self._ImagePath_AddBurr)
+            else:
+                self.ImageAvailable.append('False')
+                self.ImageFullPath_CCS.append(self._ImagePath_CCS)
+                self.ImageFullPath_Real.append(self._ImagePath_CCS)
 
         if 'False' in self.ImageAvailable:
 
@@ -521,7 +536,10 @@ class ImagePrediction():
 
             os.makedirs(self.OuterFolder)
             self.ChekingAIfolder = 'D:/' + 'Line_' + CCS_obj.LineID[1:]
+            # CHeck last month folder of AI result
             self.CheckingAIresultMonthly(self.ChekingAIfolder)
+            # Wring a csv file of AI prediction result
+            self.Writing_CSVfile_monthly_report()
 
     def CheckingAIresultMonthly(self, FolderPath):
 
@@ -563,17 +581,49 @@ class ImagePrediction():
                 raise Exception
         except:
             print('Folder is not exist')
-        
+    
+    def Writing_CSVfile_monthly_report(self):
+
+        # Anazying the G01 and G02 infromation
+        self.G01_OK_Quantity = self.Analyzing_Monthly_Images('OK', self.G01_information)
+        self.G01_NG_Quantity = self.Analyzing_Monthly_Images('NG', self.G01_information)
+        self.G01_Unsure_Quantity = self.Analyzing_Monthly_Images('Unsure', self.G01_information)
+        self.G01_Total_Quantity = self.G01_OK_Quantity + self.G01_NG_Quantity + self.G01_Unsure_Quantity
+        self.G02_OK_Quantity = self.Analyzing_Monthly_Images('OK', self.G02_information)
+        self.G02_NG_Quantity = self.Analyzing_Monthly_Images('NG', self.G02_information)
+        self.G02_Unsure_Quantity = self.Analyzing_Monthly_Images('Unsure', self.G02_information)
+        self.G02_Total_Quantity = self.G02_OK_Quantity + self.G02_NG_Quantity + self.G02_Unsure_Quantity
+
+        # Writing a CSV file to report the AI monthly performance
+        self.df_content = pd.DataFrame({'Moth':[self.MonthCount - 1, 'CCI NG Total Number:', 'AI predicted OK', 'AI predicted NG', 'AI predicted Unsure:'],
+                                        'CGL5_01':['G01', self.G01_Total_Quantity, self.G01_OK_Quantity, self.G01_NG_Quantity, self.G01_Unsure_Quantity],
+                                        'CGL5_02':['G02', self.G02_Total_Quantity, self.G02_OK_Quantity, self.G02_NG_Quantity, self.G02_Unsure_Quantity]})
+
+        self.CSV_FileName = 'D:/AI_monthly_report/' + 'AI_' + str(self.MonthCount - 1) +  '_review' + '.csv'
+        self.df_content.to_csv(self.CSV_FileName,index=False) 
+        program.ShowInfo('Last month of AI result has been written into CSV file. Please have a look!')
+
+    def Analyzing_Monthly_Images(self, SampleType, Analyze_Unit = []):
+
+        self.Analyze_Unit = Analyze_Unit
+        self.SampleType = SampleType
+        if self.SampleType in self.Analyze_Unit:
+            self.SampleTypeIndex = self.Analyze_Unit.index(self.SampleType)
+            self.SampleTypeQuantity = self.Analyze_Unit[self.SampleTypeIndex + 1]
+        else:
+            self.SampleTypeQuantity = 0
+        return self.SampleTypeQuantity
+
     def AbnormalSituation(self):
 
-        self.ImageFullPath.clear()
+        self.ImageFullPath_Real.clear()
         self.AIStatus = 'Abnormal'
         self.ImageType = '*jpg'
-        self.ImageFullPath = glob.glob(self.ImageFolder + self.PanelID + '/' + self.ImageType)
+        self.ImageFullPath_Real = glob.glob(self.ImageFolder + self.PanelID + '/' + self.ImageType)
 
-        for index in range(len(self.ImageFullPath)):
+        for index in range(len(self.ImageFullPath_Real)):
 
-            self._AIPrediction = self.AIPrediction(self.ImageFullPath[index])
+            self._AIPrediction = self.AIPrediction(self.ImageFullPath_Real[index])
             self.AI_Result.append(self._AIPrediction)
 
             if (self._AIPrediction == 'NG'):
@@ -595,14 +645,12 @@ class ImagePrediction():
 
         self.AIStatus = 'Normal'
 
-        for index in range(len(CCS_obj.Images_name)):
+        for index in range(len(self.ImageFullPath_Real)):
 
             # Predict the image by AI model
-            self._AIPrediction = self.AIPrediction(self.ImageFolder + self.PanelID + '/' + self.ImageList[index])
+            self._AIPrediction = self.AIPrediction(self.ImageFullPath_Real[index])
             # Append the AI result to a list to display
             self.AI_Result.append(self._AIPrediction)
-
-            self.ImageFullPath.append(self.ImageFolder + self.PanelID + '/' + self.ImageList[index])
 
             if (self._AIPrediction == 'NG'):
 
@@ -749,7 +797,6 @@ class ImagePrediction():
 
         self.SaveImageFoler = SaveImageFoler
         self.Image = Image
-        self.ImageName = os.path.split(self.ImagePath)[-1]
 
         if (os.path.exists(self.SaveImageFoler)):
 
@@ -759,32 +806,34 @@ class ImagePrediction():
 
             os.makedirs(self.SaveImageFoler)
         
-        self.SaveImageDir = self.SaveImageFoler + '/' + self.ImageName 
+        self.SaveImageDir = self.SaveImageFoler + '/' + self._ImageName 
         cv2.imwrite(self.SaveImageDir, self.Image)
 
 class DisplayImage():
 
     index = 0
 
-    def AddImage(self, ImageList = None, AI_Result = None, AI_Score = None, AI_speed = None):
+    def AddImage(self, ImageList_CCS = None, ImageList_Real = None, AI_Result = None, AI_Score = None, AI_speed = None):
 
-        if ( ImageList and AI_Result and AI_Score and AI_speed) is None:
+        if ( ImageList_CCS and ImageList_Real and AI_Result and AI_Score and AI_speed) is None:
 
-            self.ImageList = []
+            self.ImageList_CCS = []
+            self.ImageList_Real = []
             self.AI_Result = []
             self.AI_Score = []
             self.AI_speed = []
 
         else:
 
-            self.ImageList = ImageList
+            self.ImageList_CCS = ImageList_CCS
+            self.ImageList_Real = ImageList_Real
             self.AI_Score = AI_Score
             self.AI_Result = AI_Result
             self.AI_speed = AI_speed
 
     def ShowImage(self):
 
-        self.image = Image.open(self.ImageList[self.index])
+        self.image = Image.open(self.ImageList_Real[self.index])
         self.resizeImage = self.image.resize((480, 320), Image.ANTIALIAS)
         self.photoImage = ImageTk.PhotoImage(self.resizeImage)
         program.ImageCanvas.create_image(0, 0, anchor='nw', image=self.photoImage)
@@ -792,7 +841,7 @@ class DisplayImage():
 
     def NextImage(self):
 
-        if self.index < len(self.ImageList) - 1:    
+        if self.index < len(self.ImageList_Real) - 1:    
 
             self.index += 1
 
@@ -806,7 +855,7 @@ class DisplayImage():
 
         if self.index == 0:    
 
-            self.index = len(self.ImageList) - 1
+            self.index = len(self.ImageList_Real) - 1
 
         else:
 
@@ -819,7 +868,7 @@ class DisplayImage():
         program._AIresult.set(self.AI_Result[self.index])
         program._AIscore.set(str(self.AI_Score[self.index]))
         program._AIspeed.set(str(self.AI_speed[self.index]))
-        program._ImageName.set(os.path.split(self.ImageList[self.index])[-1])
+        program._ImageName.set(os.path.split(self.ImageList_CCS[self.index])[-1])
 
 def Load_model():
 
