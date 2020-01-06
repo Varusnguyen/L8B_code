@@ -326,8 +326,9 @@ class SocketServer():
                             if (self._ImageProcess.ImageSituation == 'False'):
                                 self.AI_status = 'AI_abnormal'
                                 program.ShowInfo(self.AI_status)
+                                self._ImageProcess.CreateOuterSavingFolder(self.AI_status)
                                 self._ImageProcess.AbnormalSituation()
-                                _DisplayImage.AddImage(self._ImageProcess.ImageFullPath, self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
+                                _DisplayImage.AddImage(self._ImageProcess.ImageFullPath_Real, self._ImageProcess.ImageFullPath_Real, self._ImageProcess.AI_Result, self._ImageProcess.AI_Score, self._ImageProcess.AI_Speed)
                                 _DisplayImage.ShowImage()
                                 program.ShowInfo('Abnormal Situation - Finished AI jobs')
                             
@@ -341,7 +342,7 @@ class SocketServer():
                                 program.ShowInfo('Normal Situation - Finished AI jobs')
 
                                 # Check the testing mode of user to decide whether need to send AI command to CCS
-                                '''
+
                                 if (program.var_testmode.get() == 1):
 
                                     program.ShowInfo('Operating in Offline Mode')
@@ -352,16 +353,13 @@ class SocketServer():
 
                                         self.send_string_AIresult = f"str,601,{CCS_obj.LineID},{CCS_obj.Panel_ID},0,end"
                                         
-
                                     else:
                                         
                                         self.send_string_AIresult = f"str,601,{CCS_obj.LineID},{CCS_obj.Panel_ID},1,end"
 
                                     program.ShowInfo('Operating in Online Mode')
                                     self.client.send(self.send_string_AIresult.encode(encoding='utf_8', errors='strict'))
-                                '''
 
-                            program.ShowInfo('Operating in Offline Mode')
                             self.Stop_Time = time.time()
                             self.Interval = round(self.Stop_Time - self.Start_time, 3)
                             program._Entry_ProcessingTime.set(self.Interval)
