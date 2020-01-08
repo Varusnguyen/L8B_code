@@ -348,14 +348,16 @@ class SocketServer():
                                     program.ShowInfo('Operating in Offline Mode')
 
                                 else:
-                                    
+
+                                    self.LineID_Sent_CCS = CCS_obj.LineID + '_' + CCS_obj.LineUnit
+
                                     if 'NG' in self._ImageProcess.AI_Result or 'Unsure' in self._ImageProcess.AI_Result:
 
-                                        self.send_string_AIresult = f"str,601,{CCS_obj.LineID},{CCS_obj.Panel_ID},0,end"
+                                        self.send_string_AIresult = f"str,601,{self.LineID_Sent_CCS},{CCS_obj.Panel_ID},0,end"
                                         
                                     else:
                                         
-                                        self.send_string_AIresult = f"str,601,{CCS_obj.LineID},{CCS_obj.Panel_ID},1,end"
+                                        self.send_string_AIresult = f"str,601,{self.LineID_Sent_CCS},{CCS_obj.Panel_ID},1,end"
 
                                     program.ShowInfo('Operating in Online Mode')
                                     self.client.send(self.send_string_AIresult.encode(encoding='utf_8', errors='strict'))
@@ -593,7 +595,7 @@ class ImagePrediction():
         self.G02_Total_Quantity = self.G02_OK_Quantity + self.G02_NG_Quantity + self.G02_Unsure_Quantity
 
         # Writing a CSV file to report the AI monthly performance
-        self.df_content = pd.DataFrame({'Moth':[self.MonthCount - 1, 'CCI NG Total Number:', 'AI predicted OK', 'AI predicted NG', 'AI predicted Unsure:'],
+        self.df_content = pd.DataFrame({'Month':[self.MonthCount - 1, 'CCI NG Total Number:', 'AI predicted OK', 'AI predicted NG', 'AI predicted Unsure:'],
                                         'CGL5_01':['G01', self.G01_Total_Quantity, self.G01_OK_Quantity, self.G01_NG_Quantity, self.G01_Unsure_Quantity],
                                         'CGL5_02':['G02', self.G02_Total_Quantity, self.G02_OK_Quantity, self.G02_NG_Quantity, self.G02_Unsure_Quantity]})
 
@@ -684,7 +686,7 @@ class ImagePrediction():
         self.CheckBurr(self.ImagePath)
         if self._BurrCheck == 'True':
 
-            self.AI_Score.append(100)
+            self.AI_Score.append(100.0)
             self.AI_Speed.append(0.01)
             self.AIResult = 'NG'
 
